@@ -14,12 +14,17 @@ from struct import pack, unpack
 from enum import Enum
 import json
 import os
+import traceback
 from presagectypes import Presage, PresageCallback
+import sys
+
 
 lastkeydowntime = -1
 
-presageconfig = os.path.join(os.path.dirname(os.path.realpath(__file__)), "res", "presage.xml")
-presagedll = os.path.join(os.path.dirname(os.path.realpath(__file__)), "libpresage-1.dll")
+dirname = os.path.dirname(os.path.realpath(sys.argv[0])) # __file__
+
+presageconfig = os.path.join(dirname, "res", "presage.xml")
+presagedll = "libpresage-1.dll" # os.path.join(os.path.dirname(os.path.realpath(__file__)), "libpresage-1.dll")
 
 keystrokes_state = {}
 disabled = False
@@ -1225,30 +1230,32 @@ class CodesLayoutViewWidget(QWidget):
     
 if __name__ == '__main__':
     global layoutmanage, window, myConfig
-    import sys
-    initActions()
-    try:
-        myConfig = readConfig(configfile)
-    except FileNotFoundError:
-        myConfig = newConfig()
-    layoutmanager = LayoutManager(os.path.join(os.path.dirname(os.path.realpath(__file__)), "layouts.json"), actions)
-    if layoutmanager.active is None:
-        raise AssertionError("layouts.json has no mainlayout")
+    
     app = QApplication(sys.argv)
-
-    if not QSystemTrayIcon.isSystemTrayAvailable():
-        QMessageBox.critical(None, "MorseWriter", "I couldn't detect any system tray on this system.")
+    try:
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            QMessageBox.critical(None, "MorseWriter", "I couldn't detect any system tray on this system.")
+            sys.exit(1)
+        QApplication.setQuitOnLastWindowClosed(False)
+        initActions()
+        try:
+            myConfig = readConfig(configfile)
+        except FileNotFoundError:
+            myConfig = newConfig()
+        layoutmanager = LayoutManager(os.path.join(dirname, "layouts.json"), actions)
+        if layoutmanager.active is None:
+            raise AssertionError("layouts.json has no mainlayout")
+        window = Window()
+        #code = CodeRepresentation(window, "A", "233232")
+        #code.disable()
+        #code.tickDitDah()
+        #code.tickDitDah()
+        if myConfig.get("autostart", False):
+            window.start(myConfig)
+        else:
+            window.show()
+        sys.exit(app.exec_())
+    except:
+        #raise
+        QMessageBox.critical(None, "MorseWriter Fatal Error", "{}".format(traceback.format_exc()))
         sys.exit(1)
-
-    QApplication.setQuitOnLastWindowClosed(False)
-
-    window = Window()
-    #code = CodeRepresentation(window, "A", "233232")
-    #code.disable()
-    #code.tickDitDah()
-    #code.tickDitDah()
-    if myConfig.get("autostart", False):
-        window.start(myConfig)
-    else:
-        window.show()
-    sys.exit(app.exec_())
